@@ -1,0 +1,74 @@
+
+url = "https://people.zoho.eu/people/api/timetracker/gettimesheetdetails?timesheetId=" + Id + "&dateFormat=dd/MM/yyyy";
+response = invokeurl
+[
+	url :url
+	type :GET
+	connection:"timesheetconnection"
+];
+timesheet = response.get("response").get("result");
+//info timesheet;
+// need to check whathere the timesheet is Aproved or not
+tsarr = timesheet.get("tsArr");
+//info "tsarr--"+tsarr;
+//hour = tsarr.get("hours");
+// it is an arr which has all the job related inoformation 
+info "Time Sheet Arr--" + tsarr.size();
+for each  tsJob in tsarr
+{
+	//hour = tsJob.get("hours");
+	approvalstatus = tsJob.get("approvalStatus");
+	info "approvalstatus--" + approvalstatus;
+	if(approvalstatus == "approved")
+	{
+		employeeId = tsJob.get("erecno");
+		info "employeeId--" + employeeId;
+		hour = tsJob.get("hours").toString();
+		info "hour--" + hour;
+		LeftValue = hour.left(2).toDecimal();
+		info "leftValue-" + LeftValue;
+		RightValue = hour.right(2).toDecimal();
+		RightValue = RightValue/100;
+		info "Right Value-" + RightValue;
+		logHour = LeftValue + RightValue;
+	
+		
+		
+		info "Log Hour--" + logHour;
+		employee = zoho.people.getRecordByID("employee",employeeId);
+		//info "employee--"+employee;
+		empEmail = employee.get("EmailID");
+		leaveStatus = invokeurl
+		[
+			url :"https://people.zoho.eu/people/api/leave/getLeaveTypeDetails?userId=" + employeeId
+			type :GET
+			connection:"timesheetconnection"
+		];
+		leaveResult = leaveStatus.get("response").get("result");
+		//info "Leave result--" + leaveResult;
+		for each  leave in leaveResult
+		{
+			leaveID = leave.get("Id");
+			if(leaveID == 44127000000266918)
+			{
+				name = leave.get("Name");
+				info "Name--" + name;
+				balance = leave.get("BalanceCount");
+				info "balance--" + balance;
+				bal = {employeeId:{44127000000266918:{"date":"03-Apr-2023","count":logHour,"reason":"Test"}}};
+				mp = Map();
+				header = Map();
+				mp.put("balanceData",bal);
+				mp.put("dateFormat","dd-MMM-yyyy");
+				updateLeaveBalance = invokeurl
+				[
+					url :"https://people.zoho.eu/api/leave/addBalance"
+					type :POST
+					parameters:mp
+					connection:"timesheetconnection"
+				];
+				info "updateLeaveBalance--" + updateLeaveBalance;
+			}
+		}
+	}
+}
