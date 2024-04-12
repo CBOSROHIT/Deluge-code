@@ -1,0 +1,93 @@
+paramap = Map();
+orgId = organization.get("organization_id");
+info "orgId-" + orgId;
+invoice_id = invoice.get("invoice_id");
+info "invoice_id-" + invoice_id;
+invoice_no = invoice.get("invoice_number");
+info "invoice_no-" + invoice_no;
+invoice_status = invoice.get("status");
+info "invoice_status-" + invoice_status;
+invoice_customerid = invoice.get("customer_id");
+info "invoice_customerid-" + invoice_customerid;
+invoice_customername = invoice.get("customer_name");
+info "invoice_customername-" + invoice_customername;
+custdetails = zoho.books.getRecordsByID("contacts",orgId,invoice_customerid,"zbooksconnect");
+info "custdetails - " + custdetails;
+customerEmail = custdetails.get("contact").get("email");
+info "customerEmail -" + customerEmail;
+cards = custdetails.get("contact").get("cards");
+info "cards -" + cards;
+if(cards != {})
+{
+	info "CARD TRUE";
+	for each  card in cards
+	{
+		cardid = card.get("card_id");
+		info "Card Id. - " + cardid;
+	}
+}
+//----------Getting Item details from Invoice Line Items----------
+invlineitems = invoice.get("line_items");
+//info "invlineitems - " + invlineitems;
+for each  entry in invlineitems
+{
+	//-------------Get INV Line Items Details--------------------
+	itemname = entry.get("name");
+	info "itemname - " + itemname;
+	if(itemname.contains("Priority Response and Annual Maintenance - Gold Package. billed-annually") = true)
+	{
+		info "***Annual Renewal***";
+		//_____________________________All Item PUT Statements___________________________________
+		paramap.put("customer_id",invoice_customerid);
+		paramap.put("customer",{"email":customerEmail});
+		paramap.put("plan",{"plan_code":"001AR","name":"Annual Renewal"});
+		//----Adding 365 days to Invoice Paid Date for Annual Subscription 'starts_at' field----
+		sub_start_date = today.addDay(365);
+		info "Subscription Start Date - " + sub_start_date;
+		paramap.put("starts_at",sub_start_date);
+		if(cards != {})
+		{
+			paramap.put("auto_collect",true);
+			paramap.put("card_id",cardid);
+		}
+		else if(cards = {})
+		{
+			info "CARD FALSE";
+			paramap.put("auto_collect",false);
+		}
+		autocollect = paramap.get("auto_collect");
+		info "autocollect - " + autocollect;
+		createSubscription = zoho.billing.create("Subscriptions",orgId,paramap,"zbillingsconnect");
+		info "createSubscription - " + createSubscription;
+	}
+	else if(itemname.contains("Priority Response and Annual Maintenance - Gold Package. billed-monthly") = true)
+	{
+		info "***Monthly Renewal***";
+		//_____________________________All Item PUT Statements___________________________________
+		paramap.put("customer_id",invoice_customerid);
+		paramap.put("customer",{"email":customerEmail});
+		paramap.put("plan",{"plan_code":"001MR","name":"Monthly Renewal"});
+		//----Adding 30 days to Invoice Paid Date for Monthly Subscription 'starts_at' field----
+		sub_start_date = today.addDay(30);
+		info "Subscription Start Date - " + sub_start_date;
+		paramap.put("starts_at",sub_start_date);
+		if(cards != {})
+		{
+			paramap.put("auto_collect",true);
+			paramap.put("card_id",cardid);
+		}
+		else if(cards = {})
+		{
+			info "CARD FALSE";
+			paramap.put("auto_collect",false);
+		}
+		autocollect = paramap.get("auto_collect");
+		info "autocollect - " + autocollect;
+		createSubscription = zoho.billing.create("Subscriptions",orgId,paramap,"zbillingsconnect");
+		info "createSubscription - " + createSubscription;
+	}
+	else
+	{
+		info "No Maintenance Item selected for Subscription";
+	}
+}
