@@ -1,0 +1,95 @@
+
+//This is a sample function. Uncomment to execute or make changes to this function.
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+info "invoice-" + invoice;
+potid = invoice.get("zcrm_potential_id");
+deal = zoho.crm.getRecordById("Deals",potid,"bookstocrm");
+info "deal-" + deal;
+// item = Zoho.books.getRecordsByID("items", organizationID, "74841000058440409", "recurringinvoice");
+// info "item-"+item;
+lineItems = invoice.get("line_items");
+recurringItem = List();
+if(!lineItems.isEmpty())
+{
+	//info "Working...";
+	for each  line in lineItems
+	{
+		lineItemid = line.get("item_id");
+		itemrecord = zoho.books.getRecordsByID("items",organizationID,lineItemid,"recurringinvoice");
+		if(itemrecord.get("code") == 0 && itemrecord.get("message") == "success")
+		{
+			a = itemrecord.isEmpty();
+			if(!a)
+			{
+				item = itemrecord.get("item");
+				product_type = item.get("product_type");
+				info "product_type-" + product_type;
+				if(product_type == "service")
+				{
+					recurringItem.add(item);
+				}
+			}
+		}
+	}
+}
+//info "recurringItem-"+recurringItem;
+if(recurringItem.isEmpty())
+{
+	info "► Recurring Invoice could not be created. You haven't selected any products yet.";
+}
+else
+{
+	customerID = invoice.get("customer_id");
+	info "customerID-" + customerID;
+	currency_id = invoice.get("currency_id");
+	info "currency_id-" + currency_id;
+	billing_address = invoice.get("billing_address");
+	// 	repeat_every = 2;
+	start_date = today;
+	salesperson_id = invoice.get("salesperson_id");
+	recurrence_frequency_formatted = "Daily";
+	customer_name = invoice.get("customer_name");
+	paramap = Map();
+	paramap.put("recurrence_name",customer_name + "Recurring Invoice");
+	// need to change with customername + type like(Domestic and Commercial+ created year)
+	paramap.put("customer_id",customerID);
+	paramap.put("customer_name",customer_name);
+	paramap.put("currency_id",currency_id);
+	paramap.put("start_date",start_date);
+	// contract start date or install date pending from Eimear
+	//paramap.put("billing_address", billing_address);
+	// 	paramap.put("repeat_every",repeat_every); 
+	paramap.put("salesperson_id",salesperson_id);
+	paramap.put("recurrence_frequency","years"); // chnage recurrence_frequency according to need
+	// // this will get from deal level (contract term)
+	paramapLineList = list();
+	for each  ri in recurringItem
+	{
+		subMap = Map();
+		subMap.put("item_id",ri.get("item_id"));
+		subMap.put("name",ri.get("name"));
+		info ri.get("quantity");
+		subMap.put("quantity",ri.get("quantity"));
+		subMap.put("line_item_taxes",ri.get("line_item_taxes"));
+		subMap.put("item_custom_fields",ri.get("item_custom_fields"));
+		subMap.put("rate",ri.get("rate"));
+		subMap.put("item_total",ri.get("item_total"));
+		paramapLineList.add(subMap);
+	}
+	paramap.put("line_items",paramapLineList);
+	info "paramap-" + paramap;
+	// 	JsonMap = Map();
+	// 	JsonMap.put("JSONString",paramap);
+	createRecord = zoho.books.createRecord("recurringinvoices",organizationID,paramap,"recurringinvoice");
+	info "createRecord-" + createRecord;
+	// 		response = invokeurl
+	// 		[
+	// 			url :"https://www.zohoapis.eu/books/v3/recurringinvoices?organization_id=" + organizationID
+	// 			type :POST
+	// 			parameters:JsonMap
+	// 			connection:"recurringinvoice"
+	// 		];
+	// 		info response;
+}
